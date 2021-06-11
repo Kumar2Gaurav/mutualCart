@@ -3,10 +3,77 @@ from rest_framework.generics import ListCreateAPIView
 from rest_framework import views ,status
 from rest_framework.response import Response
 from .models import Cart, Product
+from django.contrib.auth.models import User
+from rest_framework.decorators import api_view
+from rest_framework.authtoken.models import Token
+
 import requests
+
+def checkuser(token):
+    token_check = Token.objects.filter(key=token)
+    if token_check:
+        return True
+    return False
+
+
 
 
 # Create your views here.
+
+def create_user(username, email, firstname, lastname, password=None):
+    try:
+        user_obj = User.objects.create(username=username, email=email, first_name=firstname
+                                       , last_name=lastname)
+        if password:
+            user_obj.set_password(password)
+            user_obj.save()
+        else:
+            default_password = "password@123"
+            user_obj.set_password(default_password)
+            user_obj.save()
+        return  True
+    except:
+        return False
+
+
+@api_view(['POST'])
+def signup(request):
+    username = request.GET.get("username")
+    email = request.GET.get("password")
+    firstname = request.GET.get("username")
+    lastname = request.GET.get("password")
+    password = request.GET.get("username",None)
+    user_creation = create_user(username, email, firstname, lastname, password)
+    if user_creation:
+        result = {"status":True,"data":"User created Successfully"}
+        return Response(result,status.HTTP_200_OK)
+    else:
+        result = {"status":False,"data":"Unable to create User"}
+        return Response(result,status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+def login(request):
+    try:
+        username = request.GET.get("username")
+        password = request.GET.get("password")
+        user_obj = User.object.filter(username=username,password=password)
+        if user_obj:
+            user_obj = user_obj[0]
+            token, created = Token.objects.get_or_create(user=user_obj)
+            result = {"status":False,"data":"User tokem generated","token":token}
+            return Response(result,status.HTTP_404_NOT_FOUND)
+        else:
+            result = {"status":False,"data":"User not found please sign up"}
+            return Response(result,status.HTTP_404_NOT_FOUND)
+    except:
+        result = {"status": False, "data": "Request Error"}
+        return Response(result, status.HTTP_400_BAD_REQUEST)
+    
+
+
+
 
 
 class GetPostCart(ListCreateAPIView, views.APIView):
@@ -28,8 +95,7 @@ class GetPostCart(ListCreateAPIView, views.APIView):
     def post(self, request):
         try:
             msg = f"Post Request in GetPostDataType {request.data}"
-            user_obj = request.user
-            if user_obj.users.role == "super_admin":
+            if checkuser(token):
                 title = request.data.get("title")
                 type = request.data.get("type")
                 description = request.data.get("description")
@@ -67,24 +133,32 @@ class GetPostCart(ListCreateAPIView, views.APIView):
 
     def put(self,request):
         try:
-            cart_id = int(request.data.get("cart_id"))
-            quantity = int(request.data.get("quantity"))
-            if quantity < 0:
-                result = {"status": True, "data": "Quantity cant be less than 0", "cart_id": cart_id}
+            if checkuser(token):
+                cart_id = int(request.data.get("cart_id"))
+                quantity = int(request.data.get("quantity"))
+                if quantity < 0:
+                    result = {"status": True, "data": "Quantity cant be less than 0", "cart_id": cart_id}
+                    return Response(result, status=status.HTTP_200_OK)
+                Cart.objects.filter(cart_id= cart_id).update(product_count=quantity)
+                result = {"status": True, "data": "Product quantites changed", "cart_id": cart_id}
                 return Response(result, status=status.HTTP_200_OK)
-            Cart.objects.filter(cart_id= cart_id).update(product_count=quantity)
-            result = {"status": True, "data": "Product quantites changed", "cart_id": cart_id}
-            return Response(result, status=status.HTTP_200_OK)
+            else:
+                result = {"status": False, "data": "You are not  authorised to access"}
+                return Response(result, status=status.HTTP_401_UNAUTHORIZED)
         except:
             result = {"status": False, "data": "You are not  authorised to access"}
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request):
         try:
-            cart_id = int(request.data.get("cart_id"))
-            Cart.objects.filter(cart_id= cart_id).delete()
-            result = {"status": True, "data": "Product removed from cart", "cart_id": cart_id}
-            return Response(result, status=status.HTTP_200_OK)
+            if checkuser(token):
+                cart_id = int(request.data.get("cart_id"))
+                Cart.objects.filter(cart_id= cart_id).delete()
+                result = {"status": True, "data": "Product removed from cart", "cart_id": cart_id}
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                result = {"status": False, "data": "You are not  authorised to access"}
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
         except:
             result = {"status": False, "data": "You are not  authorised to access"}
             return Response(result, status=status.HTTP_400_BAD_REQUEST)

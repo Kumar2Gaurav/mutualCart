@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Cart',
+    'rest_framework.authtoken'
 ]
 
 MIDDLEWARE = [
