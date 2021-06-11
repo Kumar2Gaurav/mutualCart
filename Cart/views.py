@@ -14,8 +14,8 @@ def checkuser(request):
     token = request.headers["Authorization"].split()[1]
     token_check = Token.objects.filter(key=token)
     if token_check:
-        return True
-    return False
+        return True,token_check[0].user
+    return False,False
 
 
 
@@ -85,8 +85,8 @@ class GetPostCart(ListCreateAPIView, views.APIView):
     def get(self, request):
         all_products,url = [None] * 2
         try:
-            import ipdb;ipdb.set_trace()
-            if checkuser(request):
+            check,user_obj = checkuser(request)
+            if check:
                 url = "https://api.jsonbin.io/b/603c78b081087a6a8b931ebb"
                 all_products = {"status":True,"data":requests.get(url)}
                 return Response(all_products, status=status.HTTP_200_OK)
@@ -103,7 +103,8 @@ class GetPostCart(ListCreateAPIView, views.APIView):
     def post(self, request):
         try:
             msg = f"Post Request in GetPostDataType {request.data}"
-            if checkuser(request):
+            check, user_obj = checkuser(request)
+            if check:
                 title = request.data.get("title")
                 type = request.data.get("type")
                 description = request.data.get("description")
@@ -126,7 +127,7 @@ class GetPostCart(ListCreateAPIView, views.APIView):
                                              height=height,width=width,price=price,rating=rating)
                     product.save()
 
-                cart = Cart(product_map= product,product_count=quantity)
+                cart = Cart(product_map= product,product_count=quantity,user_cart=user_obj)
                 cart.save()
 
                 result = {"status": True, "data": "Product added into cart","cart_id":cart.id}
@@ -141,32 +142,34 @@ class GetPostCart(ListCreateAPIView, views.APIView):
 
     def put(self,request):
         try:
-            if checkuser(request):
+            check, user_obj = checkuser(request)
+            if check:
                 cart_id = int(request.data.get("cart_id"))
                 quantity = int(request.data.get("quantity"))
                 if quantity < 0:
                     result = {"status": True, "data": "Quantity cant be less than 0", "cart_id": cart_id}
                     return Response(result, status=status.HTTP_200_OK)
-                Cart.objects.filter(cart_id= cart_id).update(product_count=quantity)
+                Cart.objects.filter(id= cart_id).update(product_count=quantity)
                 result = {"status": True, "data": "Product quantites changed", "cart_id": cart_id}
                 return Response(result, status=status.HTTP_200_OK)
             else:
                 result = {"status": False, "data": "You are not  authorised to access"}
                 return Response(result, status=status.HTTP_401_UNAUTHORIZED)
         except:
-            result = {"status": False, "data": "You are not  authorised to access"}
+            result = {"status": False, "data": "request Error"}
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self,request):
         try:
-            if checkuser(request):
+            check, user_obj = checkuser(request)
+            if check:
                 cart_id = int(request.data.get("cart_id"))
-                Cart.objects.filter(cart_id= cart_id).delete()
+                Cart.objects.filter(id= cart_id).delete()
                 result = {"status": True, "data": "Product removed from cart", "cart_id": cart_id}
                 return Response(result, status=status.HTTP_200_OK)
             else:
                 result = {"status": False, "data": "You are not  authorised to access"}
-                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                return Response(result, status=status.HTTP_401_UNAUTHORIZED)
         except:
             result = {"status": False, "data": "You are not  authorised to access"}
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
