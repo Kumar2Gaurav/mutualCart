@@ -10,7 +10,8 @@ from django.contrib.auth import authenticate,login
 
 import requests
 
-def checkuser(token):
+def checkuser(request):
+    token = request.headers["Authorization"].split()[1]
     token_check = Token.objects.filter(key=token)
     if token_check:
         return True
@@ -84,10 +85,11 @@ class GetPostCart(ListCreateAPIView, views.APIView):
     def get(self, request):
         all_products,url = [None] * 2
         try:
-            if checkuser(token):
+            import ipdb;ipdb.set_trace()
+            if checkuser(request):
                 url = "https://api.jsonbin.io/b/603c78b081087a6a8b931ebb"
                 all_products = {"status":True,"data":requests.get(url)}
-                return Response(all_products, status=status.HTTP_404_NOT_FOUND)
+                return Response(all_products, status=status.HTTP_200_OK)
             else:
                 result = {"status": False, "data": "You are not  authorised to access"}
                 return Response(result, status=status.HTTP_401_UNAUTHORIZED)
@@ -101,7 +103,7 @@ class GetPostCart(ListCreateAPIView, views.APIView):
     def post(self, request):
         try:
             msg = f"Post Request in GetPostDataType {request.data}"
-            if checkuser(token):
+            if checkuser(request):
                 title = request.data.get("title")
                 type = request.data.get("type")
                 description = request.data.get("description")
@@ -139,7 +141,7 @@ class GetPostCart(ListCreateAPIView, views.APIView):
 
     def put(self,request):
         try:
-            if checkuser(token):
+            if checkuser(request):
                 cart_id = int(request.data.get("cart_id"))
                 quantity = int(request.data.get("quantity"))
                 if quantity < 0:
@@ -157,7 +159,7 @@ class GetPostCart(ListCreateAPIView, views.APIView):
 
     def delete(self,request):
         try:
-            if checkuser(token):
+            if checkuser(request):
                 cart_id = int(request.data.get("cart_id"))
                 Cart.objects.filter(cart_id= cart_id).delete()
                 result = {"status": True, "data": "Product removed from cart", "cart_id": cart_id}
