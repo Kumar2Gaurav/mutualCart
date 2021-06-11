@@ -9,18 +9,18 @@ import requests
 # Create your views here.
 
 
-class GetPostDataType(ListCreateAPIView, views.APIView):
+class GetPostCart(ListCreateAPIView, views.APIView):
 
 
     def get(self, request):
         all_products,url = [None] * 2
         try:
             url = "https://api.jsonbin.io/b/603c78b081087a6a8b931ebb"
-            all_products = requests.get(url)
+            all_products = {"status":True,"data":requests.get(url)}
             return Response(all_products, status=status.HTTP_404_NOT_FOUND)
 
         except:
-            result = "Unable to fetch result"
+            result ={"status":False,"data": "Unable to fetch result"}
             return Response(result, status=status.HTTP_404_NOT_FOUND)
         finally:
             del all_products,url
@@ -40,6 +40,9 @@ class GetPostDataType(ListCreateAPIView, views.APIView):
                 rating = request.data.get("rating")
                 quantity = request.data.get("quantity")
                 product_check = Product.objects.filter(title=title,type=type)
+                if quantity < 0:
+                    result = {"status": True, "data": "Quantity cant be less than 0"}
+                    return Response(result, status=status.HTTP_200_OK)
                 if product_check:
                     product_check.update(description=description,filename=filename,
                                          height=height,width=width,price=price,rating=rating)
@@ -52,7 +55,7 @@ class GetPostDataType(ListCreateAPIView, views.APIView):
                 cart = Cart(product_map= product,product_count=quantity)
                 cart.save()
 
-                result = {"status": True, "data": "Product added into Cary","cart_id":cart.id}
+                result = {"status": True, "data": "Product added into cart","cart_id":cart.id}
                 return Response(result, status=status.HTTP_200_OK)
             else:
                 result = {"status": False, "data": "You are not  authorised to access"}
@@ -60,6 +63,32 @@ class GetPostDataType(ListCreateAPIView, views.APIView):
         except:
             result = {"status": False, "data": "No Content"}
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def put(self,request):
+        try:
+            cart_id = int(request.data.get("cart_id"))
+            quantity = int(request.data.get("quantity"))
+            if quantity < 0:
+                result = {"status": True, "data": "Quantity cant be less than 0", "cart_id": cart_id}
+                return Response(result, status=status.HTTP_200_OK)
+            Cart.objects.filter(cart_id= cart_id).update(product_count=quantity)
+            result = {"status": True, "data": "Product quantites changed", "cart_id": cart_id}
+            return Response(result, status=status.HTTP_200_OK)
+        except:
+            result = {"status": False, "data": "You are not  authorised to access"}
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request):
+        try:
+            cart_id = int(request.data.get("cart_id"))
+            Cart.objects.filter(cart_id= cart_id).delete()
+            result = {"status": True, "data": "Product removed from cart", "cart_id": cart_id}
+            return Response(result, status=status.HTTP_200_OK)
+        except:
+            result = {"status": False, "data": "You are not  authorised to access"}
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 
