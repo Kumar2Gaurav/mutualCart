@@ -76,6 +76,35 @@ def login(request):
     except:
         result = {"status": False, "data": "Request Error"}
         return Response(result, status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def user_cart_list(request):
+    try:
+        check, user_obj = checkuser(request)
+        if check:
+            all_user_cart = Cart.objects.filter(user_cart=user_obj)
+            cart_list = []
+            for product in all_user_cart:
+                mapping = {}
+                mapping["title"] = product.product_map.title
+                mapping["type"] = product.product_map.type
+                mapping["description"] = product.product_map.description
+                mapping["filename"] = product.product_map.filename
+                mapping["height"] = product.product_map.height
+                mapping["width"] = product.product_map.width
+                mapping["price"] = product.product_map.price
+                mapping["rating"] = product.product_map.rating
+                cart_list.append(mapping)
+                
+            result = {"status":True,"data":cart_list}
+            return Response(result,status.HTTP_200_OK)
+        else:
+            result = {"status":False,"data":"You are not  authorised to access"}
+            return Response(result,status.HTTP_404_NOT_FOUND)
+    except:
+        result = {"status": False, "data": "Request Error"}
+        return Response(result, status.HTTP_400_BAD_REQUEST)
     
 
 
