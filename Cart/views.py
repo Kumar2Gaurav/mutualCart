@@ -64,3 +64,4 @@ class GetPostDataType(ListCreateAPIView, views.APIView):
 
 
 
+
