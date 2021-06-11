@@ -1,5 +1,5 @@
 from django.urls import path
-from views import GetPostCart
+from .views import GetPostCart
 
 
 urlpatterns = [
