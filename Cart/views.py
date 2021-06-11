@@ -6,6 +6,7 @@ from .models import Cart, Product
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate,login
 
 import requests
 
@@ -22,6 +23,9 @@ def checkuser(token):
 
 def create_user(username, email, firstname, lastname, password=None):
     try:
+        user_check  = User.objects.filter(username=username,email=email)
+        if user_check:
+            return False
         user_obj = User.objects.create(username=username, email=email, first_name=firstname
                                        , last_name=lastname)
         if password:
@@ -36,13 +40,14 @@ def create_user(username, email, firstname, lastname, password=None):
         return False
 
 
+
 @api_view(['POST'])
 def signup(request):
-    username = request.GET.get("username")
-    email = request.GET.get("password")
-    firstname = request.GET.get("username")
-    lastname = request.GET.get("password")
-    password = request.GET.get("username",None)
+    username = request.data.get("username")
+    email = request.data.get("email")
+    firstname = request.data.get("firstname")
+    lastname = request.data.get("lastname")
+    password = request.data.get("password",None)
     user_creation = create_user(username, email, firstname, lastname, password)
     if user_creation:
         result = {"status":True,"data":"User created Successfully"}
@@ -58,11 +63,11 @@ def login(request):
     try:
         username = request.GET.get("username")
         password = request.GET.get("password")
-        user_obj = User.object.filter(username=username,password=password)
+        user_obj = authenticate(username=username,password=password)
         if user_obj:
-            user_obj = user_obj[0]
+            user_obj = user_obj
             token, created = Token.objects.get_or_create(user=user_obj)
-            result = {"status":False,"data":"User tokem generated","token":token}
+            result = {"status":False,"data":"User tokem generated","token":token.key}
             return Response(result,status.HTTP_404_NOT_FOUND)
         else:
             result = {"status":False,"data":"User not found please sign up"}
@@ -73,18 +78,19 @@ def login(request):
     
 
 
-
-
-
 class GetPostCart(ListCreateAPIView, views.APIView):
 
 
     def get(self, request):
         all_products,url = [None] * 2
         try:
-            url = "https://api.jsonbin.io/b/603c78b081087a6a8b931ebb"
-            all_products = {"status":True,"data":requests.get(url)}
-            return Response(all_products, status=status.HTTP_404_NOT_FOUND)
+            if checkuser(token):
+                url = "https://api.jsonbin.io/b/603c78b081087a6a8b931ebb"
+                all_products = {"status":True,"data":requests.get(url)}
+                return Response(all_products, status=status.HTTP_404_NOT_FOUND)
+            else:
+                result = {"status": False, "data": "You are not  authorised to access"}
+                return Response(result, status=status.HTTP_401_UNAUTHORIZED)
 
         except:
             result ={"status":False,"data": "Unable to fetch result"}
